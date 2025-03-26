@@ -1,5 +1,10 @@
 import { useState } from "react";
 import axios from "axios";
+import ReactMarkdown from "react-markdown";
+import { Input, Button, Typography, Alert, Spin, Card } from "antd";
+
+const { TextArea } = Input;
+const { Title } = Typography;
 
 const Dictaphone = () => {
   const [userInput, setUserInput] = useState("");
@@ -41,7 +46,7 @@ const Dictaphone = () => {
           "No content returned.";
         setResponse(formatResponse(rawResponse));
       } else {
-        setError("No response received from Gemini.");
+        setError("No valid response received from Gemini.");
       }
     } catch (err) {
       console.error("Error analyzing text:", err);
@@ -59,27 +64,75 @@ const Dictaphone = () => {
   };
 
   return (
-    <div>
-      <h2>Enter your text below:</h2>
-      <textarea
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        flexDirection: "column",
+        height: "100vh",
+        width: "100vw",
+        background: "#1E1E1E",
+        color: "#E0E0E0",
+        padding: "20px",
+      }}
+    >
+      <Title level={3} style={{ color: "#ffffff", textAlign: "center" }}>
+        Enter your text below:
+      </Title>
+
+      <TextArea
         value={userInput}
         onChange={(e) => setUserInput(e.target.value)}
         rows={5}
-        cols={40}
         placeholder="Type something here..."
-      ></textarea>
-      <br />
-      <button onClick={analyzeText} disabled={loading}>
-        {loading ? "Analyzing..." : "Analyze Text"}
-      </button>
+        style={{
+          backgroundColor: "#2E2E2E",
+          color: "#ffffff",
+          borderRadius: "8px",
+          width: "500px",
+        }}
+      />
 
-      {error && <p style={{ color: "red" }}>Error: {error}</p>}
+      <Button
+        type="primary"
+        onClick={analyzeText}
+        disabled={loading}
+        style={{
+          marginTop: "10px",
+          backgroundColor: "#1677ff",
+          borderColor: "#1677ff",
+          width: "200px",
+        }}
+      >
+        {loading ? <Spin size="small" /> : "Analyze Text"}
+      </Button>
+
+      {error && (
+        <Alert
+          message={error}
+          type="error"
+          showIcon
+          style={{ marginTop: "10px", width: "500px" }}
+        />
+      )}
 
       {response && (
-        <div id="response">
-          <h3>Analysis Result:</h3>
-          <pre>{response}</pre>
-        </div>
+        <Card
+          style={{
+            marginTop: "20px",
+            background: "#2E2E2E",
+            color: "#E0E0E0",
+            padding: "15px",
+            borderRadius: "8px",
+            width: "500px",
+          }}
+        >
+          <Title level={4} style={{ color: "#ffffff", textAlign: "center" }}>
+            Analysis Result:
+          </Title>
+          <ReactMarkdown>{response}</ReactMarkdown>
+        </Card>
       )}
     </div>
   );
