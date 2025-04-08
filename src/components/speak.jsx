@@ -1,139 +1,195 @@
 import { useState } from "react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
-import { Input, Button, Typography, Alert, Spin, Card } from "antd";
+import { Input, Button, Spin, Avatar } from "antd";
 
 const { TextArea } = Input;
-const { Title } = Typography;
 
 const Dictaphone = () => {
   const [userInput, setUserInput] = useState("");
-  const [response, setResponse] = useState("");
-  const [error, setError] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const analyzeText = async () => {
-    if (!userInput.trim()) {
-      setError("Please enter some text.");
-      return;
-    }
+    if (!userInput.trim()) return;
 
-    setError(null);
+    const input = userInput.trim();
+    setMessages((prev) => [...prev, { type: "user", text: input }]);
+    setUserInput("");
     setLoading(true);
-    setResponse("");
 
     try {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       const result = await axios.post(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
         {
-          contents: [
-            {
-              parts: [{ text: userInput }],
-            },
-          ],
+          contents: [{ parts: [{ text: input }] }],
         },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+        { headers: { "Content-Type": "application/json" } }
       );
 
-      if (result.data && result.data.candidates) {
-        const rawResponse =
-          result.data.candidates[0]?.content?.parts[0]?.text ||
-          "No content returned.";
-        setResponse(formatResponse(rawResponse));
-      } else {
-        setError("No valid response received from Gemini.");
-      }
-    } catch (err) {
-      console.error("Error analyzing text:", err);
-      setError("An error occurred while communicating with Gemini.");
+      const rawResponse =
+        result.data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+        "No content returned.";
+      const formatted = formatResponse(rawResponse);
+      setMessages((prev) => [...prev, { type: "ai", text: formatted }]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        { type: "ai", text: "⚠️ Error getting response." },
+      ]);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatResponse = (responseText) => {
-    return responseText
+  const formatResponse = (text) =>
+    text
       .replace(/([.!?])\s*(?=[A-Z])/g, "$1\n\n")
       .replace(/([a-z])([A-Z])/g, "$1. $2")
       .trim();
+
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      analyzeText();
+    }
   };
 
   return (
     <div
       style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        flexDirection: "column",
         height: "100vh",
         width: "100vw",
-        background: "#1E1E1E",
-        color: "#E0E0E0",
+        backgroundColor: "#f7f7f8",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
         padding: "20px",
+        position: "relative",
+        overflow: "hidden",
       }}
     >
-      <Title level={3} style={{ color: "#ffffff", textAlign: "center" }}>
-        Enter your text below:
-      </Title>
-
-      <TextArea
-        value={userInput}
-        onChange={(e) => setUserInput(e.target.value)}
-        rows={5}
-        placeholder="Type something here..."
+      <h1
         style={{
-          backgroundColor: "#2E2E2E",
-          color: "#ffffff",
-          borderRadius: "8px",
-          width: "500px",
-        }}
-      />
-
-      <Button
-        type="primary"
-        onClick={analyzeText}
-        disabled={loading}
-        style={{
-          marginTop: "10px",
-          backgroundColor: "#1677ff",
-          borderColor: "#1677ff",
-          width: "200px",
+          fontSize: "24px",
+          fontWeight: "bold",
+          color: "#333",
+          marginBottom: "20px",
         }}
       >
-        {loading ? <Spin size="small" /> : "Analyze Text"}
-      </Button>
+        Text Analyzer
+      </h1>
+      <div
+        style={{
+          flex: 1,
+          width: "100%",
+          maxWidth: "700px",
+          overflowY: "auto",
+          marginBottom: "80px",
+          padding: "20px",
+          borderRadius: "12px",
+          backgroundColor: "#fff",
+          boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+          display: messages.length === 0 ? "flex" : "block", // Ensure the window has a minimal layout if no messages
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        {messages.length === 0 ? (
+          <div
+            style={{
+              textAlign: "center",
+              color: "#888",
+              fontSize: "18px",
+              fontStyle: "italic",
+            }}
+          >
+            No conversation yet. Start typing below!
+          </div>
+        ) : (
+          messages.map((msg, idx) => (
+            <div
+              key={idx}
+              style={{
+                marginBottom: "16px",
+                display: "flex",
+                flexDirection: msg.type === "user" ? "row-reverse" : "row",
+              }}
+            >
+              <Avatar
+                style={{
+                  backgroundColor: msg.type === "user" ? "#1677ff" : "#999",
+                  marginRight: msg.type === "user" ? "10px" : "0",
+                  marginLeft: msg.type === "ai" ? "10px" : "0",
+                }}
+              >
+                {msg.type === "user" ? "U" : "A"}
+              </Avatar>
+              <div
+                style={{
+                  backgroundColor: msg.type === "user" ? "#1677ff" : "#e0e0e0",
+                  color: msg.type === "user" ? "#fff" : "#333",
+                  padding: "12px 16px",
+                  borderRadius: "18px",
+                  maxWidth: "80%",
+                  wordBreak: "break-word",
+                  lineHeight: "1.5",
+                }}
+              >
+                <ReactMarkdown>{msg.text}</ReactMarkdown>
+              </div>
+            </div>
+          ))
+        )}
+        {loading && (
+          <div style={{ color: "#999", marginTop: "10px" }}>
+            <Spin /> Analyzing...
+          </div>
+        )}
+      </div>
 
-      {error && (
-        <Alert
-          message={error}
-          type="error"
-          showIcon
-          style={{ marginTop: "10px", width: "500px" }}
-        />
-      )}
-
-      {response && (
-        <Card
+      <div
+        style={{
+          position: "sticky",
+          bottom: 0,
+          width: "100%",
+          maxWidth: "700px",
+          backgroundColor: "#fff",
+          padding: "10px 20px",
+          boxShadow: "0 -2px 10px rgba(0,0,0,0.1)",
+          zIndex: 1000,
+        }}
+      >
+        <TextArea
+          value={userInput}
+          onChange={(e) => setUserInput(e.target.value)}
+          onPressEnter={handleKeyPress}
+          rows={2}
+          placeholder="Type your message and press Enter..."
           style={{
-            marginTop: "20px",
-            background: "#2E2E2E",
-            color: "#E0E0E0",
-            padding: "15px",
-            borderRadius: "8px",
-            width: "500px",
+            backgroundColor: "#f7f7f7",
+            color: "#333",
+            borderRadius: "30px",
+            border: "1px solid #ddd",
+            padding: "10px",
+          }}
+        />
+        <Button
+          type="primary"
+          onClick={analyzeText}
+          loading={loading}
+          style={{
+            marginTop: "10px",
+            width: "100%",
+            borderRadius: "30px",
+            backgroundColor: "#1677ff",
+            borderColor: "#1677ff",
           }}
         >
-          <Title level={4} style={{ color: "#ffffff", textAlign: "center" }}>
-            Analysis Result:
-          </Title>
-          <ReactMarkdown>{response}</ReactMarkdown>
-        </Card>
-      )}
+          Analyze Text
+        </Button>
+      </div>
     </div>
   );
 };
