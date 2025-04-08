@@ -5,7 +5,7 @@ import { Input, Button, Spin, Avatar } from "antd";
 
 const { TextArea } = Input;
 
-const Dictaphone = () => {
+const GeminiTextAnalyzer = () => {
   const [userInput, setUserInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -194,4 +194,4 @@ const Dictaphone = () => {
   );
 };
 
-export default Dictaphone;
+export default GeminiTextAnalyzer;

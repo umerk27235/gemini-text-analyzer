@@ -1,6 +1,6 @@
-import Dictaphone from "../components/speak.jsx";
+import GeminiTextAnalyzer from "../components/speak.jsx";
 function HomePage() {
-  return <Dictaphone />;
+  return <GeminiTextAnalyzer />;
 }
 
 export default HomePage;
