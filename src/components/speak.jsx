@@ -91,7 +91,7 @@ const GeminiTextAnalyzer = () => {
           borderRadius: "12px",
           backgroundColor: "#fff",
           boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
-          display: messages.length === 0 ? "flex" : "block", // Ensure the window has a minimal layout if no messages
+          display: messages.length === 0 ? "flex" : "block",
           justifyContent: "center",
           alignItems: "center",
         }}
