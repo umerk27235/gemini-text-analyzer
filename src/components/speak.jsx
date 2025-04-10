@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import { Input, Button, Spin, Avatar } from "antd";
@@ -10,7 +10,7 @@ const GeminiTextAnalyzer = () => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const analyzeText = async () => {
+  const analyzeText = useCallback(async () => {
     if (!userInput.trim()) return;
 
     const input = userInput.trim();
@@ -32,16 +32,34 @@ const GeminiTextAnalyzer = () => {
         result.data?.candidates?.[0]?.content?.parts?.[0]?.text ||
         "No content returned.";
       const formatted = formatResponse(rawResponse);
-      setMessages((prev) => [...prev, { type: "ai", text: formatted }]);
-    } catch {
+      let currentText = "";
+      formatted.split("").forEach((char, index) => {
+        setTimeout(() => {
+          currentText += char;
+          setMessages((prev) => {
+            const updatedMessages = [...prev];
+            if (updatedMessages[updatedMessages.length - 1]?.type === "ai") {
+              updatedMessages[updatedMessages.length - 1].text = currentText;
+            } else {
+              updatedMessages.push({ type: "ai", text: currentText });
+            }
+            return updatedMessages;
+          });
+        }, index * 3.5);
+      });
+    } catch (error) {
+      console.error("Error fetching response:", error);
       setMessages((prev) => [
         ...prev,
-        { type: "ai", text: "⚠️ Error getting response." },
+        {
+          type: "ai",
+          text: "⚠️ Error getting response. Please try again later.",
+        },
       ]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userInput]);
 
   const formatResponse = (text) =>
     text
@@ -49,27 +67,30 @@ const GeminiTextAnalyzer = () => {
       .replace(/([a-z])([A-Z])/g, "$1. $2")
       .trim();
 
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      analyzeText();
-    }
+  const handleKeyPress = useCallback(
+    (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        analyzeText();
+      }
+    },
+    [analyzeText]
+  );
+
+  const containerStyle = {
+    height: "100vh",
+    width: "100vw",
+    backgroundColor: "#f7f7f8",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    padding: "20px",
+    position: "relative",
+    overflow: "hidden",
   };
 
   return (
-    <div
-      style={{
-        height: "100vh",
-        width: "100vw",
-        backgroundColor: "#f7f7f8",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        padding: "20px",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
+    <div style={containerStyle}>
       <h1
         style={{
           fontSize: "24px",
@@ -132,9 +153,11 @@ const GeminiTextAnalyzer = () => {
                   color: msg.type === "user" ? "#fff" : "#333",
                   padding: "12px 16px",
                   borderRadius: "18px",
-                  maxWidth: "80%",
+                  maxWidth: "100%", // Adjusted to prevent overflow
                   wordBreak: "break-word",
                   lineHeight: "1.5",
+                  overflowWrap: "break-word",
+                  whiteSpace: "pre-wrap",
                 }}
               >
                 <ReactMarkdown>{msg.text}</ReactMarkdown>
@@ -152,7 +175,7 @@ const GeminiTextAnalyzer = () => {
       <div
         style={{
           position: "sticky",
-          bottom: 0,
+          bottom: 30,
           width: "100%",
           maxWidth: "700px",
           backgroundColor: "#fff",
@@ -167,6 +190,7 @@ const GeminiTextAnalyzer = () => {
           onPressEnter={handleKeyPress}
           rows={2}
           placeholder="Type your message and press Enter..."
+          aria-label="User input text area"
           style={{
             backgroundColor: "#f7f7f7",
             color: "#333",
